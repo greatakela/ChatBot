@@ -1,3 +1,9 @@
 flask
-transformers
-torch
+sentence-transformers
+pandas
+gunicorn
+requests
+datasets
+DialogTag
+nltk
+tf-keras
