@@ -1,84 +1,141 @@
-![Binaryhood](Logo/BinaryhoodLogo.png)
+<p align="center">
+  <img src="https://www.merchandisingplaza.co.uk/282130/2/Stickers-Star-Trek-STAR-TREK-Spock-Live-Long-Prosper-Sticker-l.jpg" 
+       alt="Live Long and Prosper Sticker" 
+       width="300">
+</p>
 
-# ChatBot
+# HW1 Retrieval-based чат бот
 
-## Installation & Setup
+**Задание**: Необходимо разработать retrieval-based чат-бот, используя подход retrieval-based. Бот должен вести диалог как определенный персонаж сериала, имитируя стиль и манеру конкретного персонажа сериала. Важно учесть особенности речи и темы, которые поднимает персонаж, его типичные реакции.
 
-[Install Python] https://www.python.org/downloads/
+## Данные
+В качестве основы для чат-бота я взял скрипты к сериалам "Star Trek", которые загрузил из репозитория по [ссылке](https://github.com/varenc/star_trek_transcript_search), в часности реплики Мистера Спока, члена экипажа корабля, ученого с планеты Вулкан.
 
-[Install pip]
+Данные обрабатываются следующим образом:
+- очистка скрипта
+- отбор реплик персонажа в качестве ответов. Именно из этих реплик будет выбирать бот свой ответ на высказывание пользователя.
+- выделение предшествующей фразы как вопроса. Если это фраза первая в сцене, то это поле будет пустым.
+- отбор предыдущих реплик как контекста диалога (ограничение не более 5 фраз в контексте). Если фраза первая в сцене, то контекст также будет пустым. Контекст - идущие подряд предложения.
 
+После обработки получилось около 5800 реплик персонажа, которые могут быть использованы ботом в диалоге. Затем я подготовил датасеты для обучения модели ранжирования и отбора кандидатов, и модели переранижирования кандидатов.
+
+Код в ноутбуке [GNLP_HW1-data_prep.ipynb](https://github.com/greatakela/ChatBot/blob/main/Notebooks/GNLP_HW1-data_prep.ipynb)
+
+### Данные для обучения bi-encoder 
+На основе обработанных данных готовятся данные для обучения bi-encoder. Поскольку я обучаю модель c использованием triplet loss, то данные преобразуются в тройки:
+- ANCHOR - комбинация контекста и вопросов
+- ANSWER - ответ на вопрос из скрипта
+- WRONG_ANSWER - случайно подобранный ответ (реплики взяты из сериала Др. Хаус)
+
+### Данные для обучения reranker
+Эти же данные будут использованы для обучения модели-reranker для переранжирования вариантов ответа. Исходные данные будут приняты как правильные с лейблом 0 и будут дополнены репликами из других сериалов в качестве ответа и помечены лейблом 1. 
+
+Данные для reranker включают контекст+вопрос+ответ, разделенные специальным токеном [SEP]. Подготовлено примерно 10 тыс. образцов для обучения, разбивка по классам 50:50.
+
+## Архитектура чат-бота
+
+Схематично процесс работы чат-бота представлен на рисунке ниже.
+
+![image](https://github.com/shakhovak/chat_bot_katya/assets/89096305/90f460a2-1062-4b55-b2eb-83961e840709)
+
+
+**База данных реплик** включает векторизованные при помощи модели [обученного_энкодера](https://huggingface.co/Shakhovak/chatbot_sentence-transformer) скрипты, включающие контекст и вопрос. 
+
+Отбор реплик из базы данных будет проводиться в 2 этапа:
+- отбор похожих по косинусной близости контекста+вопрос из созданной векторной базы данных. В результате отбирается 20 кандидатов с максимальным скорингом похожести на пользовательский контекст+вопрос.
+- классификация моделью-reranker на основе Bert полученных кандидатов на предмет того, является ли подобранный ответ продолжением вопроса с контекстом или нет. Среди кандидатов отбираются те, которые были классифицированы как относящиеся к классу 0 (ответ является продолжением) и ранжируются по скорингу-уверенности модели в отнесении образца к нужному классу. Если же все реплики были классифицированы как относящиеся к 1 классу (ответ НЕ является продолжением вопроса и контекста), то в ответ подается топ-1 из отобранных по косинусной близости.
+
+:bulb: **Intent классфикатор** взят готовый из библиотеки [DialogTag](https://pypi.org/project/DialogTag/) и использовался как для разметки исходных данных, так и получаемого от пользователя высказывания. на основе полученного намерения фильтруется пул отобранных кандидатов. Также тег с намерением добавляется в эмбединги, которые использует bi-encoder.
+
+В основе модели  :bulb: **bi-encoder** ```distilroberta-base ```, обученная на описанных раннее данных в виде триплетов. Для обучения я воспользовалась библиотекой sentence transformers. Обучение основано на Triplet Loss Function, которая минимизиурет расстояние между якорным предложением и правильным ответом и максимизирует между якорным и неправильным ответом (см. рис ниже). 
+
+![image](https://github.com/shakhovak/chat_bot_katya/assets/89096305/6e5129c2-bab7-49d7-aac1-20bb53259c2f)
+
+Оценивается модель по точности (accuracy) выявления случаев, когда близость между якорным текстом и правильным ответом больше, чем между якорным и нейтральным. Необученная distilroberta-base давала 58%, после обучения метрика стала на уровне 98%
+
+![image](https://github.com/shakhovak/chat_bot_katya/assets/89096305/94f01abf-153e-4c62-96c4-ebac81c090ff)
+
+Посмотреть ноутбук с обученем модел можно [здесь](https://github.com/shakhovak/chat_bot_katya/blob/master/train_models/bi_encoder_train2.ipynb) . Модель загружена в мой репозиторий на Hugging Face ([ссылка](https://huggingface.co/Shakhovak/chatbot_sentence-transformer)) и уже оттуда будет использоваться в инференсе.
+
+В основе модели :bulb: **re-ranker** ```bert-base-uncased```, обученная на подготовленных ранее данных. Классификация оценивалась при помощи accuracy, было сделано 3 подхода к обучению. Графики обучения можно посмотреть в wandb по [ссылке](https://wandb.ai/shakhova/reranker_train?workspace=user-katya_shakhova) . Ниже принт-скрин графиков обучения.
+
+![image](https://github.com/shakhovak/chat_bot_katya/assets/89096305/2ae7c305-0e23-45e7-baa8-e8390fc55b48)
+
+Высоких показателей не удалось достичь, финальная точность модели варьируется от 78 до 80%. Также видно, что на 3-ей эпохе модель уже переобучилась.
+
+Модель выгружена на Hugging Face ([ссылка](https://huggingface.co/Shakhovak/RerankerModel_chat_bot)) и уже оттуда будет использоваться в инференсе.
+
+## Структура репозитория
+
+```bash
+│   README.md - отчет для ДЗ
+│   requirements.txt
+│   Dockerfile
+|
+│   retrieve_bot.py - основной файл алгоритма
+│   utils.py - вспомогательные функции в т.ч. для предобработки данных
+|   app.py - для запуска UI c flask
+|
+├───train_models - ноутбуки с обучением моделей
+├───templates - оформление веб-интерфейса
+│       chat.html
+├───static - оформление веб-интерфейса
+│       style.css
+├───data
+│       low_score_scripts.pkl - сценарии при низких скорах похожести
+│       scripts_vectors.pkl - база данных контекст+воппрос на основе векторов LaBSe
+│       scripts.pkl - исходные данные
 ```
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-```
 
-```
-python3 get-pip.py
-```
+## Реализация web-сервиса
 
-Ensure pip is installed by running the following command
+Чат реализован на основе Flask, запускается скриптом ```app.py```, который выстраивает графический интерфейс, создает инстант класса ChatBot, загружает файлы и модели. 
 
-```
-pip --version
-```
+> [!IMPORTANT]
+> - Попробовать поговорить с Шелдоном можно по [ссылке](https://huggingface.co/spaces/Shakhovak/Sheldon_Retrieval_chat_bot). Это бесплатный ресурс, иногда работает медленно :(
+> - Дополнительно развернула docker image с ботом наа ВМ d Yandex Cloud по [ссылке](http://178.154.202.151:5000). Здесь платный ресурс, но тоже без GPU. Субъективно, на платной машине быстрее работает. UPD: ВМ удалена после проверки задания
 
-If you have Python & pip installed then check their version in the terminal or command line tools
 
-```
-python3 --version
-```
+Хочу обратить внимание, что бесплатное размещение не включает GPU, только CPU, поэтому инференс работает медленнее, чем на локальном компьютере. Для ускорения я сократила число кандидатов до 5. Кроме того, сервер на Hugging face работает в течение 48 часов после последнего посещения, поэтому при проверке может понадобиться еще раз запустить сервер.
 
-```
-pip --version
-```
+Один из минусов моей реализации - отсутствие сессий и обновления контекста для каждого пользователя/сессии. Я оставила только ограничения по общему размеру контекста (не более 5 предложений).
 
-## Installing Flask
+## Оценка качества чат-бота
+В целом чат-бот должен оцениваться по релевантности реплик в контексте диалога, поэтому здесь основной все-таки будет пользовательская оценка. 
 
-In your terminal run the requirements.txt file using this pip
+Я попробовала посмотреть, как будет отвечать чат-бот при применении разных видов энкодеров:
+- [sentence-transformers/all-mpnet-base-v2]() - готовый обученный энкодер
+- [sentence-transformers/LaBSE]()- готовый обученный энкодер
+- [Shakhovak/chatbot_sentence-transformer]() - энкодер, который обучила на данных, описанных выше для bi-encoder
 
-```
-pip install -r requirements.txt
-```
+Я выбрала одинаковые реплики и посмотрела, как работает retrieval (см. таблицу ниже)
 
-## Running ChatBot Application in Terminal
+| Encoder | Hi man!  | Any plans for today?  | What are you talking about?  |Let’s talk about Leonard  |
+| :---:   | :---: | :---: |:---: |:---: |
+| sentence-transformers/all-mpnet-base-v2| Hello,my friend.  |What does it mean?|You askedmy friend if she wanted to hear something weird.|Again, urban slang. In which, I believe I’ m gaining remarkable fluency. So, could you repeat?|
+| sentence-transformers/LaBSE | Hello,my friend. | Yes?  |My plan was to jump out at the state line, but one of my nose plugs fell into the toilet.  |Nothing. I say nothing.  |
+| Shakhovak/chatbot_sentence-transformer | Hello. So I guess you’ re really holding up the other four fingers?   | It’ s called fitting in. By the way, good luck.   |You clearly weren’ t listening to my topic sentence, get your women in line! You make them apologize tomy friend and set things right. I am a man of science, not someone’ s snuggle bunny!  |Then it hits her. How is she going to survive? I mean, she has no prospects, no marketable skills. And then one day, she meets a group of geniuses and their friend Howard.  |
 
-```
-cd into your directory
-```
+Интересно, что при использовании эмбедингов от модели, обученных на данных по Шелдону, скоры похожести стали выше, чем при использовании более общих эмбедингов. 
 
-```
-python3 app.py
-```
+Среди выше приведенных примеров сложно сказать, какой лучше. Я решила оставить обученную на даннаом датасете модель и добавить ограничение на intent и минимальный уровень похожести ответа перед передачей данных в re-ranker, чтобы добавить немного детерминированности в диалог.
 
-## What you will create
+## Начать работу с чатом
 
-In this tutorial, I will guide you through the process of building a chatbot that can carry out conversations with users using natural language processing.
+Для установки чата, можно воспользоваться docker image, который я сохранила на публичный репозиторий в dockerhub. C помощью команды ```docker pull shakhovak/chat2:latest``` скачать образ и запустить ```sudo docker run -it --name chat -p 5000:5000 --rm shakhovak/chat2``` .
 
-To start, we will be using Microsoft DialoGPT, a pre-trained language model that can generate human-like responses to given prompts. We will be integrating DialoGPT with Flask, a popular Python web framework, to create a web application that can communicate with users via a chat interface.
+> [!WARNING]
+> Обращаю внимание, что в image нет начальных данных, а только обработанные файлы pickle. Чтобы запустить обработку начальных данных, нужно скачать файлы в папку data (все файлы star wars в подпапку star_wars) и запустить функции по их предобработке.
 
-For the frontend of our application, we will be using HTML, CSS, and JavaScript to create a visually appealing and interactive chat interface. Additionally, we will be using jQuery to handle the HTTP requests that are made to the backend server.
+<hr>
 
-Throughout the tutorial, I will provide step-by-step instructions on how to set up your development environment, install the necessary dependencies, and create the required files and code for the application. I will also explain how to train and fine-tune the DialoGPT model to improve the accuracy of its responses.
+### Шпаргалка как развернуть docker image в Yandex Cloud
+1. Создать ВМ и убедиться, что у нее открыт наружу нужный порт (в случае с ботом - 5000). Машину создала на Debian
+2. Установить на ВМ docker enginе. Инструкция вот [здесь](https://docs.docker.com/engine/install/debian/) для debian. Основные команды:
+  - удалить потенциальные конфликты  
+  - setup docker apt repository
+  -  установить докер
+3. Залогиниться на docker hub ``` sudo docker login ``` и запулить докер образ на ВМ ```sudo docker pull shakhovak/chat2:latest```
+4. Запустить образ на ВМ  ```sudo docker run -it --name chat -p 5000:5000 --rm shakhovak/chat2```
 
-By the end of this tutorial, you will have a fully functional chatbot that can engage in conversations with users, and you will have gained valuable experience in using Microsoft DialoGPT, Flask, and web development technologies such as HTML, CSS, and JavaScript.
-
-# ChatBot Link
-
-The Chatbot is constructed using the Microsoft/DialoGPT-medium model.
-
-```
-https://huggingface.co/microsoft/DialoGPT-medium
-```
-
-# User-Html
-
-```
-var userHtml = '<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send">' + user_input + '<span class="msg_time_send">'+ time +
-    '</span></div><div class="img_cont_msg"><img src="https://i.ibb.co/d5b84Xw/Untitled-design.png" class="rounded-circle user_img_msg"></div></div>';
-```
-
-# Bot-HTML
-
-```
-var botHtml = '<div class="d-flex justify-content-start mb-4"><div class="img_cont_msg"><img src="https://i.ibb.co/fSNP7Rz/icons8-chatgpt-512.png" class="rounded-circle user_img_msg"></div><div class="msg_cotainer">' + bot_response + '<span class="msg_time">' + time + '</span></div></div>';
-```
+<hr>
