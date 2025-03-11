@@ -102,7 +102,7 @@
 Чат-бот должен оцениваться по релевантности реплик в контексте диалога, поэтому здесь основной все-таки будет пользовательская оценка. 
 
 Я попробовал посмотреть, как будет отвечать чат-бот при применении разных видов энкодеров:
-- [sentence-transformers/all-mpnet-base-v2]() - готовый обученный энкодер
+- [sentence-transformers/all-mpnet-base-v2](https://huggingface.co/sentence-transformers/all-mpnet-base-v2) - готовый обученный энкодер
 - [sentence-transformers/LaBSE](https:/huggingface.co/sentence-transformers/LaBSE)- готовый обученный энкодер
 - [greatakela/gnlp_hw1_encoder](https://huggingface.co/greatakela/gnlp_hw1_encoder) - энкодер, который обучила на данных, описанных выше для bi-encoder
 
