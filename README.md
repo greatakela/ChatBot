@@ -114,7 +114,7 @@
 | **sentence-transformers/LaBSE** | Greetings. How may I assist in your endeavors? | It would be illogical to assume that all conditions remain stable. | The universe is vast and full of wonders. It is logical to explore them. | Without followers, evil cannot spread. |
 | **greatakela/gnlp_hw1_encoder** | I assume this greeting is a social convention rather than a necessity? | The needs of the many outweigh the needs of the few. | Superior ability breeds superior ambition. | I fail to comprehend your indignation, sir. I have simply made the logical deduction that you are a liar. |
 
-Интересно, что при использовании эмбедингов от модели, обученных на данных по Споку, оценки похожести стали выше, чем при использовании более общих эмбедингов. 
+Интересно, что при использовании эмбедингов от модели, обученных на данных по репликам Спока, оценки похожести стали выше, чем при использовании более общих эмбедингов. 
 
 Среди выше приведенных примеров сложно сказать, какой лучше. Я оставил обученную на даннаом датасете модель и добавил ограничение на намеренье и минимальный уровень похожести ответа перед передачей данных в переанжировщик, чтобы добавить немного детерминированности в диалог.
 
