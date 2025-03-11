@@ -39,7 +39,7 @@ class ChatBot:
         with open("data/spock_lines_vectorized.pkl", "rb") as fp:
             self.vect_data = pickle.load(fp)
         self.scripts = pd.read_pickle("data/spock_lines.pkl")
-        with open("data/low_score_sripts.json", "r") as f:
+        with open("data/spock_dujour.json", "r") as f:
             self.low_scoring_list = json.load(f)
         self.tag_model = DialogTag("distilbert-base-uncased")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
