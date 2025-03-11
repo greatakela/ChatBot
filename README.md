@@ -55,7 +55,7 @@
 
 Код обучения находится в [ноутбуке](https://github.com/greatakela/ChatBot/blob/main/Notebooks/GNLP_HW1-bi_encoder_model_train.ipynb). Модель загружена в мой репозиторий на Hugging Face ([ссылка](https://huggingface.co/greatakela/gnlp_hw1_encoder)) и уже оттуда будет использоваться в инференсе.
 
-В основе модели :bulb: **re-ranker** ```bert-base-uncased```, обученная на подготовленных ранее данных. Классификация оценивалась при помощи accuracy, было сделано 3 подхода к обучению. Графики обучения можно посмотреть в wandb по [ссылке](https://wandb.ai/shakhova/reranker_train?workspace=user-katya_shakhova) . Ниже принт-скрин графиков обучения.
+В основе модели **re-ranker** ```bert-base-uncased```, обученная на подготовленных ранее данных. Классификация оценивалась при помощи accuracy, было сделано 3 подхода к обучению. Графики обучения можно посмотреть в wandb по [ссылке](https://wandb.ai/shakhova/reranker_train?workspace=user-katya_shakhova) . Ниже принт-скрин графиков обучения.
 
 ![image](https://github.com/shakhovak/chat_bot_katya/assets/89096305/2ae7c305-0e23-45e7-baa8-e8390fc55b48)
 
@@ -68,11 +68,11 @@
 ```bash
 │   README.md - отчет по ДЗ 1
 │   requirements.txt
-|   __init__.py
+│   __init__.py
 │   retrieval_bot.py - основной файл алгоритма
 │   utilities.py - вспомогательные функции
-|   app.py - для запуска UI c flask
-|
+│   app.py - для запуска UI c flask
+│
 ├───Notebooks - ноутбуки с подготовкой данных и обучением моделей
 ├───templates - оформление веб-интерфейса
 │       chat.html
@@ -82,58 +82,32 @@
 │       spock_dujour.pkl - сценарии при низких оценках похожести
 │       spock_lines_vectorized.pkl - векторизованная база данных контекст-вопрос
 │       spock_lines.pkl - исходные данные
-|       spock_lines_reranker.pkl - исходные данные для переранжировщика
+│       spock_lines_reranker.pkl - исходные данные для переранжировщика
 ```
 
 ## Реализация web-сервиса
 
 Чат реализован на основе Flask, запускается скриптом ```app.py```, который выстраивает графический интерфейс, создает инстант класса ChatBot, загружает файлы и модели. 
 
-> [!IMPORTANT]
-> - Попробовать поговорить с Шелдоном можно по [ссылке](https://huggingface.co/spaces/Shakhovak/Sheldon_Retrieval_chat_bot). Это бесплатный ресурс, иногда работает медленно :(
-> - Дополнительно развернула docker image с ботом наа ВМ d Yandex Cloud по [ссылке](http://178.154.202.151:5000). Здесь платный ресурс, но тоже без GPU. Субъективно, на платной машине быстрее работает. UPD: ВМ удалена после проверки задания
-
-
-Хочу обратить внимание, что бесплатное размещение не включает GPU, только CPU, поэтому инференс работает медленнее, чем на локальном компьютере. Для ускорения я сократила число кандидатов до 5. Кроме того, сервер на Hugging face работает в течение 48 часов после последнего посещения, поэтому при проверке может понадобиться еще раз запустить сервер.
-
-Один из минусов моей реализации - отсутствие сессий и обновления контекста для каждого пользователя/сессии. Я оставила только ограничения по общему размеру контекста (не более 5 предложений).
+Для установки проекта нужно склонировать репозиторий ```https://github.com/greatakela/ChatBot.git```, создать среду, затем сделать установку ```pip install -r requirements.txt```. Чат-бот запускается командой ```python app.py```, и открывается в локальном окне браузера на ```http://127.0.0.1:5000```.
 
 ## Оценка качества чат-бота
-В целом чат-бот должен оцениваться по релевантности реплик в контексте диалога, поэтому здесь основной все-таки будет пользовательская оценка. 
+Чат-бот должен оцениваться по релевантности реплик в контексте диалога, поэтому здесь основной все-таки будет пользовательская оценка. 
 
-Я попробовала посмотреть, как будет отвечать чат-бот при применении разных видов энкодеров:
+Я попробовал посмотреть, как будет отвечать чат-бот при применении разных видов энкодеров:
 - [sentence-transformers/all-mpnet-base-v2]() - готовый обученный энкодер
 - [sentence-transformers/LaBSE]()- готовый обученный энкодер
-- [Shakhovak/chatbot_sentence-transformer]() - энкодер, который обучила на данных, описанных выше для bi-encoder
+- [greatakela/gnlp_hw1_encoder]() - энкодер, который обучила на данных, описанных выше для bi-encoder
 
-Я выбрала одинаковые реплики и посмотрела, как работает retrieval (см. таблицу ниже)
+Я выбрал несколько реплик и посмотрел, как работает retrieval на основе разных энкодеров.
 
-| Encoder | Hi man!  | Any plans for today?  | What are you talking about?  |Let’s talk about Leonard  |
-| :---:   | :---: | :---: |:---: |:---: |
-| sentence-transformers/all-mpnet-base-v2| Hello,my friend.  |What does it mean?|You askedmy friend if she wanted to hear something weird.|Again, urban slang. In which, I believe I’ m gaining remarkable fluency. So, could you repeat?|
-| sentence-transformers/LaBSE | Hello,my friend. | Yes?  |My plan was to jump out at the state line, but one of my nose plugs fell into the toilet.  |Nothing. I say nothing.  |
-| Shakhovak/chatbot_sentence-transformer | Hello. So I guess you’ re really holding up the other four fingers?   | It’ s called fitting in. By the way, good luck.   |You clearly weren’ t listening to my topic sentence, get your women in line! You make them apologize tomy friend and set things right. I am a man of science, not someone’ s snuggle bunny!  |Then it hits her. How is she going to survive? I mean, she has no prospects, no marketable skills. And then one day, she meets a group of geniuses and their friend Howard.  |
+| **Incoming** | **Greetings, Mr. Spock.** | **What is the logical course of action?** | **Explain your reasoning.** | **What do you think of Captain Kirk?** |
+| :---: | :---: | :---: | :---: | :---: |
+| **sentence-transformers/all-mpnet-base-v2** | Live long and prosper. | Logic is the beginning of wisdom, not the end. | Once you have eliminated the impossible, whatever remains, however improbable, must be the truth. | Captain, you almost make me believe in luck. |
+| **sentence-transformers/LaBSE** | Greetings. How may I assist in your endeavors? | It would be illogical to assume that all conditions remain stable. | The universe is vast and full of wonders. It is logical to explore them. | Without followers, evil cannot spread. |
+| **greatakela/gnlp_hw1_encoder** | I assume this greeting is a social convention rather than a necessity? | The needs of the many outweigh the needs of the few. | Superior ability breeds superior ambition. | I fail to comprehend your indignation, sir. I have simply made the logical deduction that you are a liar. |
 
-Интересно, что при использовании эмбедингов от модели, обученных на данных по Шелдону, скоры похожести стали выше, чем при использовании более общих эмбедингов. 
+Интересно, что при использовании эмбедингов от модели, обученных на данных по Споку, оценки похожести стали выше, чем при использовании более общих эмбедингов. 
 
-Среди выше приведенных примеров сложно сказать, какой лучше. Я решила оставить обученную на даннаом датасете модель и добавить ограничение на intent и минимальный уровень похожести ответа перед передачей данных в re-ranker, чтобы добавить немного детерминированности в диалог.
+Среди выше приведенных примеров сложно сказать, какой лучше. Я оставил обученную на даннаом датасете модель и добавил ограничение на намеренье и минимальный уровень похожести ответа перед передачей данных в переанжировщик, чтобы добавить немного детерминированности в диалог.
 
-## Начать работу с чатом
-
-Для установки чата, можно воспользоваться docker image, который я сохранила на публичный репозиторий в dockerhub. C помощью команды ```docker pull shakhovak/chat2:latest``` скачать образ и запустить ```sudo docker run -it --name chat -p 5000:5000 --rm shakhovak/chat2``` .
-
-> [!WARNING]
-> Обращаю внимание, что в image нет начальных данных, а только обработанные файлы pickle. Чтобы запустить обработку начальных данных, нужно скачать файлы в папку data (все файлы star wars в подпапку star_wars) и запустить функции по их предобработке.
-
-<hr>
-
-### Шпаргалка как развернуть docker image в Yandex Cloud
-1. Создать ВМ и убедиться, что у нее открыт наружу нужный порт (в случае с ботом - 5000). Машину создала на Debian
-2. Установить на ВМ docker enginе. Инструкция вот [здесь](https://docs.docker.com/engine/install/debian/) для debian. Основные команды:
-  - удалить потенциальные конфликты  
-  - setup docker apt repository
-  -  установить докер
-3. Залогиниться на docker hub ``` sudo docker login ``` и запулить докер образ на ВМ ```sudo docker pull shakhovak/chat2:latest```
-4. Запустить образ на ВМ  ```sudo docker run -it --name chat -p 5000:5000 --rm shakhovak/chat2```
-
-<hr>
