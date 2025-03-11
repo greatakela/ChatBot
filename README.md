@@ -51,13 +51,13 @@
 
 Оценивается модель по точности (accuracy) выявления случаев, когда близость между якорным текстом и правильным ответом больше, чем между якорным и нейтральным. Необученная distilroberta-base давала 58%, после обучения метрика стала на уровне 98%
 
-![image](https://github.com/shakhovak/chat_bot_katya/assets/89096305/94f01abf-153e-4c62-96c4-ebac81c090ff)
+<img src="https://github.com/greatakela/ChatBot/blob/main/static/W%26B%20Chart%203_11_2025%2C%202_38_44%20PM.png" width="49.5%"> <img src="https://github.com/greatakela/ChatBot/blob/main/static/W%26B%20Chart%203_11_2025%2C%202_39_05%20PM.png" width="49.5%">
 
 Код обучения находится в [ноутбуке](https://github.com/greatakela/ChatBot/blob/main/Notebooks/GNLP_HW1-bi_encoder_model_train.ipynb). Модель загружена в мой репозиторий на Hugging Face ([ссылка](https://huggingface.co/greatakela/gnlp_hw1_encoder)) и уже оттуда будет использоваться в инференсе.
 
 В основе модели **re-ranker** ```bert-base-uncased```, обученная на подготовленных ранее данных. Классификация оценивалась при помощи accuracy, было сделано 3 подхода к обучению. Графики обучения можно посмотреть в wandb по [ссылке](https://wandb.ai/shakhova/reranker_train?workspace=user-katya_shakhova) . Ниже принт-скрин графиков обучения.
 
-![image](https://github.com/shakhovak/chat_bot_katya/assets/89096305/2ae7c305-0e23-45e7-baa8-e8390fc55b48)
+<img src="https://github.com/greatakela/ChatBot/blob/main/static/W%26B%20Chart%203_11_2025%2C%202_38_44%20PM.png" width="49.5%"> <img src="https://github.com/greatakela/ChatBot/blob/main/static/W%26B%20Chart%203_11_2025%2C%202_39_05%20PM.png" width="49.5%">
 
 Высоких показателей не удалось достичь, финальная точность модели варьируется от 78 до 80%. Также видно, что на 3-ей эпохе модель уже переобучилась.
 
