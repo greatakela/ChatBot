@@ -55,7 +55,7 @@
 
 Код обучения находится в [ноутбуке](https://github.com/greatakela/ChatBot/blob/main/Notebooks/GNLP_HW1-bi_encoder_model_train.ipynb). Модель загружена в мой репозиторий на Hugging Face ([ссылка](https://huggingface.co/greatakela/gnlp_hw1_encoder)) и уже оттуда будет использоваться в инференсе.
 
-В основе модели **re-ranker** ```bert-base-uncased```, обученная на подготовленных ранее данных. Классификация оценивалась при помощи accuracy. Ниже принт-скрин графиков обучения.
+В основе модели **re-ranker** ```bert-base-uncased```, обученная на подготовленных ранее данных. Классификация оценивалась при помощи accuracy. Ниже распечатки графиков обучения.
 
 <img src="https://github.com/greatakela/ChatBot/blob/main/static/W%26B%20Chart%203_11_2025%2C%202_38_44%20PM.png" width="49.5%"> <img src="https://github.com/greatakela/ChatBot/blob/main/static/W%26B%20Chart%203_11_2025%2C%202_39_05%20PM.png" width="49.5%">
 
