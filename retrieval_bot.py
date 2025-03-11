@@ -75,7 +75,7 @@ class ChatBot:
         
         #print("Intent:", intent)  # Debugging
         #print("Cos Sim:", bot_cosine_scores)  # Debugging
-        print("Top Scores:", top_scores)  # Debugging
+        #print("Top Scores:", top_scores)  # Debugging
         
         if top_scores[0] < 0.9:
             if intent == "Conventional-opening":
