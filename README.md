@@ -36,6 +36,7 @@
 
 Схематично процесс работы чат-бота представлен на рисунке ниже.
 
+<p align=center> <img src="https://github.com/greatakela/ChatBot/blob/main/static/ArchBot.png"> </p>
 ![image](https://github.com/greatakela/ChatBot/blob/main/static/ArchBot.png)
 
 
